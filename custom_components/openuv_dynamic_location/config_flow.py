@@ -11,12 +11,12 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
-    CONFIG_ENTRY_VERSION,
     CONF_DEBOUNCE_SECONDS,
     CONF_DISTANCE_KM,
     CONF_LATITUDE_ENTITY,
     CONF_LONGITUDE_ENTITY,
     CONF_OPENUV_ENTRY_ID,
+    CONFIG_ENTRY_VERSION,
     DEFAULT_DEBOUNCE_SECONDS,
     DEFAULT_DISTANCE_KM,
     DEFAULT_LATITUDE_ENTITY,
