@@ -6,7 +6,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: check custom_components
+      - uses: actions/checkout@v5
+      - name: Install Ruff
+        run: python -m pip install ruff
+      - name: Run Ruff
+        run: python -m ruff check custom_components
