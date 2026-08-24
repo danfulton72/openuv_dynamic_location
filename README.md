@@ -16,48 +16,37 @@ Current release: **1.0.0**
 
 ## Installation
 
-1. Create a directory named `openuv_dynamic_location` under your Home Assistant `custom_components` directory.
-2. Copy the integration files from this repository into:
-
-   `config/custom_components/openuv_dynamic_location/`
-
+1. Create `config/custom_components/openuv_dynamic_location/` in your Home Assistant configuration directory.
+2. Copy the integration files from this repository into that directory, keeping the `translations` folder.
 3. Restart Home Assistant.
-4. Go to **Settings → Devices & services → Add integration**.
+4. Open **Settings → Devices & services → Add integration**.
 5. Search for **OpenUV Dynamic Location**.
 
 ## Configuration
 
-The setup flow allows you to choose:
+The setup flow lets you choose the GPS latitude and longitude sensors, the movement threshold in kilometres, a debounce delay, and the OpenUV config entry to update.
 
-- GPS latitude sensor
-- GPS longitude sensor
-- Minimum movement before updating OpenUV, in kilometres
-- Debounce delay after a GPS sensor update
-- The OpenUV config entry to update
+Defaults:
 
-The default GPS entities are:
-
-- `sensor.rutx50_gps_lat`
-- `sensor.rutx50_gps_lon`
-
-The default movement threshold is **25 km** and the default debounce delay is **2 seconds**.
+- Latitude: `sensor.rutx50_gps_lat`
+- Longitude: `sensor.rutx50_gps_lon`
+- Movement threshold: **25 km**
+- Debounce: **2 seconds**
 
 ## Sensors
 
-The integration exposes diagnostic sensors for:
+The integration exposes:
 
-- Distance since the last successful location update
-- Time of the last successful location update
+- **Distance since last update** — movement from the last successfully applied OpenUV location.
+- **Last updated** — timestamp of the last successful location change.
 
 ## How it works
 
-When either GPS sensor changes, the integration waits for the debounce period and reads both coordinates. If the position has moved farther than the configured threshold, it updates only the latitude and longitude fields of the selected OpenUV config entry and reloads OpenUV.
-
-The last successfully applied coordinates are stored persistently so Home Assistant restarts do not cause unnecessary updates.
+When either GPS entity changes, the integration waits for the debounce period and reads both coordinates. Once movement exceeds the configured threshold, it updates only latitude and longitude on the selected OpenUV config entry and reloads OpenUV. The last successfully applied position is persisted across Home Assistant restarts.
 
 ## Multiple OpenUV instances
 
-If more than one OpenUV integration is configured, select the intended target in this integration's options. If no target is selected, the first available OpenUV entry is used.
+If you have more than one OpenUV config entry, select the intended target in this integration's options. With no explicit target, the first available OpenUV entry is used.
 
 ## License
 
