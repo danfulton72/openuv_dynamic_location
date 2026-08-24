@@ -1,0 +1,45 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OpenUV Dynamic Location",
+        "description": "Update OpenUV from GPS coordinates after the vehicle has moved farther than the configured distance.",
+        "data": {
+          "latitude_entity": "GPS latitude sensor",
+          "longitude_entity": "GPS longitude sensor",
+          "distance_km": "Minimum movement before updating OpenUV (km)",
+          "debounce_seconds": "Seconds to wait after a GPS update before checking",
+          "openuv_entry_id": "OpenUV instance to update"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This GPS sensor pair and OpenUV target are already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "OpenUV Dynamic Location Options",
+        "description": "Update OpenUV from GPS coordinates after the vehicle has moved farther than the configured distance.",
+        "data": {
+          "latitude_entity": "GPS latitude sensor",
+          "longitude_entity": "GPS longitude sensor",
+          "distance_km": "Minimum movement before updating OpenUV (km)",
+          "debounce_seconds": "Seconds to wait after a GPS update before checking",
+          "openuv_entry_id": "OpenUV instance to update"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance_since_update": {
+        "name": "Distance since last update"
+      },
+      "last_updated": {
+        "name": "Last updated"
+      }
+    }
+  }
+}
