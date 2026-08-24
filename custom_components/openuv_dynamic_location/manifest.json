@@ -1,7 +1,7 @@
 {
   "domain": "openuv_dynamic_location",
   "name": "OpenUV Dynamic Location",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "documentation": "https://github.com/danfulton72/openuv_dynamic_location",
   "issue_tracker": "https://github.com/danfulton72/openuv_dynamic_location/issues",
   "codeowners": ["@danfulton72"],
