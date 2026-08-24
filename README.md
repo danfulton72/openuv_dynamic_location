@@ -1,53 +1,48 @@
 # OpenUV Dynamic Location
 
-Home Assistant custom integration that keeps an OpenUV config entry aligned with a moving GPS position.
+Home Assistant custom integration that keeps a configured **OpenUV** instance aligned with a moving GPS position.
 
-It watches configurable latitude and longitude sensor entities, measures movement from the last successfully applied location, and updates the selected OpenUV integration once the configured distance threshold is exceeded.
+## Features
 
-## Version
-
-Current release: **1.0.0**
+- Watches configurable latitude and longitude sensor entities.
+- Updates OpenUV only after movement exceeds a configurable distance threshold.
+- Debounces GPS updates so paired coordinates can settle.
+- Supports reconfiguration from Home Assistant without deleting the entry.
+- Exposes diagnostic distance and last-successful-update sensors.
+- Persists the last applied coordinates across Home Assistant restarts.
 
 ## Requirements
 
 - Home Assistant
-- The OpenUV integration already configured
-- Sensor entities that provide latitude and longitude values
+- OpenUV already configured
+- Sensor entities that provide latitude and longitude in decimal degrees
 
-## Installation
+## Install with HACS
 
-1. Create `config/custom_components/openuv_dynamic_location/` in your Home Assistant configuration directory.
-2. Copy the integration files from this repository into that directory, keeping the `translations` folder.
+1. In HACS, add `https://github.com/danfulton72/openuv_dynamic_location` as a custom repository of type **Integration**.
+2. Install **OpenUV Dynamic Location**.
 3. Restart Home Assistant.
-4. Open **Settings → Devices & services → Add integration**.
-5. Search for **OpenUV Dynamic Location**.
+4. Go to **Settings → Devices & services → Add integration** and search for **OpenUV Dynamic Location**.
+
+## Manual installation
+
+Copy `custom_components/openuv_dynamic_location` from this repository to `config/custom_components/openuv_dynamic_location` and restart Home Assistant.
 
 ## Configuration
 
-The setup flow lets you choose the GPS latitude and longitude sensors, the movement threshold in kilometres, a debounce delay, and the OpenUV config entry to update.
+During setup, choose the latitude sensor, longitude sensor, and the OpenUV config entry to update. The target is required so a multi-instance installation can never update an arbitrary first entry.
 
-Defaults:
+Options control the movement threshold (default **25 km**) and debounce delay (default **2 seconds**). Use **Reconfigure** to change GPS sensors or the target integration.
 
-- Latitude: `sensor.rutx50_gps_lat`
-- Longitude: `sensor.rutx50_gps_lon`
-- Movement threshold: **25 km**
-- Debounce: **2 seconds**
+## Diagnostics
 
-## Sensors
+- **Distance since last update** reports the most recently measured distance from the last successfully applied location.
+- **Last updated** changes only after OpenUV is actually updated and reloads successfully; initializing a reference after startup does not change this timestamp.
 
-The integration exposes:
+## Versioning
 
-- **Distance since last update** — movement from the last successfully applied OpenUV location.
-- **Last updated** — timestamp of the last successful location change.
-
-## How it works
-
-When either GPS entity changes, the integration waits for the debounce period and reads both coordinates. Once movement exceeds the configured threshold, it updates only latitude and longitude on the selected OpenUV config entry and reloads OpenUV. The last successfully applied position is persisted across Home Assistant restarts.
-
-## Multiple OpenUV instances
-
-If you have more than one OpenUV config entry, select the intended target in this integration's options. With no explicit target, the first available OpenUV entry is used.
+The integration manifest is versioned `1.0.0`. HACS displays the latest published GitHub Release; publish a matching `v1.0.0` release for the stable release channel.
 
 ## License
 
-No license has been specified for this repository.
+MIT — see [LICENSE](LICENSE).

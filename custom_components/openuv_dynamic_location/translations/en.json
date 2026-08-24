@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OpenUV Dynamic Location",
+        "description": "Choose the GPS source and the OpenUV integration to keep synchronized.",
+        "data": {
+          "latitude_entity": "GPS latitude sensor",
+          "longitude_entity": "GPS longitude sensor",
+          "openuv_entry_id": "OpenUV instance to update"
+        },
+        "data_description": {
+          "latitude_entity": "Sensor whose state is the current latitude in decimal degrees.",
+          "longitude_entity": "Sensor whose state is the current longitude in decimal degrees.",
+          "openuv_entry_id": "The OpenUV config entry whose latitude and longitude will be updated."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure OpenUV Dynamic Location",
+        "description": "Change the GPS source or target integration.",
+        "data": {
+          "latitude_entity": "GPS latitude sensor",
+          "longitude_entity": "GPS longitude sensor",
+          "openuv_entry_id": "OpenUV instance to update"
+        },
+        "data_description": {
+          "latitude_entity": "Sensor whose state is the current latitude in decimal degrees.",
+          "longitude_entity": "Sensor whose state is the current longitude in decimal degrees.",
+          "openuv_entry_id": "The OpenUV config entry whose latitude and longitude will be updated."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This OpenUV instance is already managed by another entry.",
+      "target_not_configured": "Set up OpenUV before adding this integration.",
+      "reconfigure_successful": "Configuration updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "OpenUV Dynamic Location options",
+        "description": "Tune how often movement is evaluated and how far the GPS position must move before updating the target.",
+        "data": {
+          "distance_km": "Minimum movement before updating OpenUV (km)",
+          "debounce_seconds": "Seconds to wait after a GPS update before checking"
+        },
+        "data_description": {
+          "distance_km": "Great-circle distance from the last successfully applied location required before an update occurs.",
+          "debounce_seconds": "Delay after a GPS state change so latitude and longitude can settle before they are read."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance_since_update": {"name": "Distance since last update"},
+      "last_updated": {"name": "Last updated"}
+    }
+  }
+}

@@ -6,7 +6,8 @@
   "issue_tracker": "https://github.com/danfulton72/openuv_dynamic_location/issues",
   "codeowners": ["@danfulton72"],
   "config_flow": true,
-  "integration_type": "service",
+  "integration_type": "helper",
   "iot_class": "calculated",
+  "dependencies": ["openuv"],
   "requirements": []
 }
