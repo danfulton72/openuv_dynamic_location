@@ -41,7 +41,7 @@ Options control the movement threshold (default **25 km**) and debounce delay (d
 
 ## Versioning
 
-The integration manifest is versioned `1.0.0`. HACS displays the latest published GitHub Release; publish a matching `v1.0.0` release for the stable release channel.
+The integration manifest is versioned `1.0.1`. HACS displays the latest published GitHub Release; publish a matching `v1.0.1` release for the stable release channel.
 
 ## License
 
