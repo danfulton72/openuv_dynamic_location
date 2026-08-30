@@ -12,6 +12,8 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, Platform
 from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.storage import Store
@@ -139,6 +141,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         openuv_entry_id=entry.data.get(CONF_OPENUV_ENTRY_ID),
     )
     entry.runtime_data = data
+
+    target = _resolve_target_entry(hass, data)
+    if target is not None:
+        target_latitude, target_longitude = _get_coordinates(target)
+        if target_latitude is not None and target_longitude is not None:
+            _cleanup_stale_openuv_registry_entries(
+                hass, target, target_latitude, target_longitude
+            )
+            _repair_openuv_entry_metadata(
+                hass, target, target_latitude, target_longitude
+            )
 
     @callback
     def gps_changed(event: Event) -> None:
@@ -281,24 +294,104 @@ async def _async_check_location(
             )
             return
 
-        new_data = dict(target.data)
-        new_data[CONF_LATITUDE] = latitude
-        new_data[CONF_LONGITUDE] = longitude
-        hass.config_entries.async_update_entry(target, data=new_data)
+        if current_latitude is None or current_longitude is None:
+            _LOGGER.error("Configured OpenUV entry has invalid coordinates")
+            return
+
+        new_unique_id = _openuv_config_unique_id(latitude, longitude)
+        if _openuv_unique_id_conflicts(hass, target, new_unique_id):
+            _LOGGER.error(
+                "Cannot move OpenUV to %s because another OpenUV entry "
+                "already uses those coordinates",
+                new_unique_id,
+            )
+            return
+
+        old_data = dict(target.data)
+        old_unique_id = target.unique_id
+        old_title = target.title
+        old_default_title = _openuv_config_unique_id(
+            current_latitude, current_longitude
+        )
+        new_title = (
+            new_unique_id
+            if target.title in (target.unique_id, old_default_title)
+            else target.title
+        )
 
         try:
-            reload_success = await hass.config_entries.async_reload(
+            unload_success = await hass.config_entries.async_unload(
                 target.entry_id
             )
         except Exception:
             _LOGGER.exception(
-                "Exception while reloading OpenUV after changing its location"
+                "Exception while unloading OpenUV before changing its location"
             )
             return
-        if not reload_success:
-            _LOGGER.error("OpenUV reload failed after changing location")
+        if not unload_success:
+            _LOGGER.error("OpenUV unload failed before changing location")
             return
 
+        _migrate_openuv_registry_location(
+            hass,
+            target,
+            current_latitude,
+            current_longitude,
+            latitude,
+            longitude,
+        )
+
+        new_data = dict(target.data)
+        new_data[CONF_LATITUDE] = latitude
+        new_data[CONF_LONGITUDE] = longitude
+        hass.config_entries.async_update_entry(
+            target,
+            data=new_data,
+            unique_id=new_unique_id,
+            title=new_title,
+        )
+
+        try:
+            setup_success = await hass.config_entries.async_setup(
+                target.entry_id
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Exception while setting up OpenUV after changing its location"
+            )
+            setup_success = False
+
+        if not setup_success:
+            _LOGGER.error(
+                "OpenUV setup failed after changing location; restoring "
+                "the previous location"
+            )
+            _migrate_openuv_registry_location(
+                hass,
+                target,
+                latitude,
+                longitude,
+                current_latitude,
+                current_longitude,
+            )
+            hass.config_entries.async_update_entry(
+                target,
+                data=old_data,
+                unique_id=old_unique_id,
+                title=old_title,
+            )
+            try:
+                await hass.config_entries.async_setup(target.entry_id)
+            except Exception:
+                _LOGGER.exception(
+                    "Exception while restoring OpenUV after a failed "
+                    "location update"
+                )
+            return
+
+        _cleanup_stale_openuv_registry_entries(
+            hass, target, latitude, longitude
+        )
         await _save_reference(data, latitude, longitude, mark_updated=True)
         async_dispatcher_send(
             hass, f"{SIGNAL_LOCATION_UPDATED}_{entry.entry_id}"
@@ -359,6 +452,175 @@ def _get_coordinates(
         )
     except (TypeError, ValueError):
         return None, None
+
+
+def _openuv_location_key(latitude: float, longitude: float) -> str:
+    """Return the coordinate key used by OpenUV entities and devices."""
+
+    return f"{latitude}_{longitude}"
+
+
+def _openuv_config_unique_id(latitude: float, longitude: float) -> str:
+    """Return the coordinate unique ID used by the OpenUV config flow."""
+
+    return f"{latitude}, {longitude}"
+
+
+def _openuv_unique_id_conflicts(
+    hass: HomeAssistant, target: ConfigEntry, unique_id: str
+) -> bool:
+    """Return whether another OpenUV entry already owns a unique ID."""
+
+    return any(
+        entry.entry_id != target.entry_id and entry.unique_id == unique_id
+        for entry in hass.config_entries.async_entries(OPENUV_DOMAIN)
+    )
+
+
+def _repair_openuv_entry_metadata(
+    hass: HomeAssistant,
+    target: ConfigEntry,
+    latitude: float,
+    longitude: float,
+) -> None:
+    """Align OpenUV config-entry metadata with its stored coordinates."""
+
+    unique_id = _openuv_config_unique_id(latitude, longitude)
+    if target.unique_id == unique_id:
+        return
+    if _openuv_unique_id_conflicts(hass, target, unique_id):
+        _LOGGER.warning(
+            "Cannot repair OpenUV unique ID to %s because another entry "
+            "already uses it",
+            unique_id,
+        )
+        return
+
+    new_title = unique_id if target.title == target.unique_id else target.title
+    hass.config_entries.async_update_entry(
+        target, unique_id=unique_id, title=new_title
+    )
+
+
+def _migrate_openuv_registry_location(
+    hass: HomeAssistant,
+    target: ConfigEntry,
+    old_latitude: float,
+    old_longitude: float,
+    new_latitude: float,
+    new_longitude: float,
+) -> None:
+    """Move OpenUV registry IDs to new coordinates before setup."""
+
+    old_key = _openuv_location_key(old_latitude, old_longitude)
+    new_key = _openuv_location_key(new_latitude, new_longitude)
+    if old_key == new_key:
+        return
+
+    entity_registry = er.async_get(hass)
+    old_prefix = f"{old_key}_"
+    new_prefix = f"{new_key}_"
+    for entity in er.async_entries_for_config_entry(
+        entity_registry, target.entry_id
+    ):
+        if entity.platform != OPENUV_DOMAIN:
+            continue
+        if not entity.unique_id.startswith(old_prefix):
+            continue
+
+        new_unique_id = (
+            f"{new_prefix}{entity.unique_id.removeprefix(old_prefix)}"
+        )
+        duplicate_entity_id = entity_registry.async_get_entity_id(
+            entity.domain, entity.platform, new_unique_id
+        )
+        if (
+            duplicate_entity_id is not None
+            and duplicate_entity_id != entity.entity_id
+        ):
+            _LOGGER.debug(
+                "Removing stale OpenUV entity %s before migrating %s",
+                duplicate_entity_id,
+                entity.entity_id,
+            )
+            entity_registry.async_remove(duplicate_entity_id)
+
+        entity_registry.async_update_entity(
+            entity.entity_id, new_unique_id=new_unique_id
+        )
+
+    device_registry = dr.async_get(hass)
+    old_identifier = (OPENUV_DOMAIN, old_key)
+    new_identifier = (OPENUV_DOMAIN, new_key)
+    old_device = device_registry.async_get_device_by_identifier(
+        old_identifier, target.entry_id
+    )
+    if old_device is None:
+        return
+
+    duplicate_device = device_registry.async_get_device_by_identifier(
+        new_identifier, target.entry_id
+    )
+    if duplicate_device is not None and duplicate_device.id != old_device.id:
+        _LOGGER.debug(
+            "Removing stale OpenUV device %s before migrating %s",
+            duplicate_device.id,
+            old_device.id,
+        )
+        device_registry.async_remove_device(duplicate_device.id)
+
+    device_registry.async_update_device(
+        old_device.id, new_identifiers={new_identifier}
+    )
+
+
+def _cleanup_stale_openuv_registry_entries(
+    hass: HomeAssistant,
+    target: ConfigEntry,
+    latitude: float,
+    longitude: float,
+) -> None:
+    """Remove OpenUV devices and entities left by earlier location changes."""
+
+    device_registry = dr.async_get(hass)
+    current_identifier = (
+        OPENUV_DOMAIN,
+        _openuv_location_key(latitude, longitude),
+    )
+    current_device = device_registry.async_get_device_by_identifier(
+        current_identifier, target.entry_id
+    )
+    if current_device is None:
+        return
+
+    stale_device_ids = {
+        device.id
+        for device in dr.async_entries_for_config_entry(
+            device_registry, target.entry_id
+        )
+        if device.id != current_device.id
+        and any(
+            identifier_domain == OPENUV_DOMAIN
+            for identifier_domain, _ in device.identifiers
+        )
+    }
+    if not stale_device_ids:
+        return
+
+    entity_registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(
+        entity_registry, target.entry_id
+    ):
+        if (
+            entity.platform == OPENUV_DOMAIN
+            and entity.device_id in stale_device_ids
+        ):
+            _LOGGER.debug("Removing stale OpenUV entity %s", entity.entity_id)
+            entity_registry.async_remove(entity.entity_id)
+
+    for device_id in stale_device_ids:
+        _LOGGER.debug("Removing stale OpenUV device %s", device_id)
+        device_registry.async_remove_device(device_id)
 
 
 def _valid_coordinates(latitude: float, longitude: float) -> bool:
