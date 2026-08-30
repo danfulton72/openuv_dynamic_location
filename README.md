@@ -8,6 +8,8 @@ Home Assistant custom integration that keeps a configured **OpenUV** instance al
 - Updates OpenUV only after movement exceeds a configurable distance threshold.
 - Debounces GPS updates so paired coordinates can settle.
 - Supports reconfiguration from Home Assistant without deleting the entry.
+- Reuses the existing OpenUV entities and service device when coordinates change.
+- Cleans up stale OpenUV service devices/entities left by older location updates.
 - Exposes diagnostic distance and last-successful-update sensors.
 - Persists the last applied coordinates across Home Assistant restarts.
 
@@ -34,6 +36,8 @@ During setup, choose the latitude sensor, longitude sensor, and the OpenUV confi
 
 Options control the movement threshold (default **25 km**) and debounce delay (default **2 seconds**). Use **Reconfigure** to change GPS sensors or the target integration.
 
+When the configured location changes, the integration migrates OpenUV's coordinate-based entity and device registry identifiers before setting OpenUV back up. This keeps one OpenUV service/device and preserves the existing entity IDs instead of creating a new set for every location.
+
 ## Diagnostics
 
 - **Distance since last update** reports the most recently measured distance from the last successfully applied location.
@@ -41,7 +45,7 @@ Options control the movement threshold (default **25 km**) and debounce delay (d
 
 ## Versioning
 
-The integration manifest is versioned `1.0.2`. HACS displays the latest published GitHub Release; publish a matching `v1.0.2` release for the stable release channel.
+The integration manifest is versioned `1.0.3`. HACS displays the latest published GitHub Release; publish a matching `v1.0.3` release for the stable release channel.
 
 ## License
 
