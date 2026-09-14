@@ -1,13 +1,17 @@
 {
   "domain": "openuv_dynamic_location",
   "name": "OpenUV Dynamic Location",
-  "codeowners": ["@danfulton72"],
+  "codeowners": [
+    "@danfulton72"
+  ],
   "config_flow": true,
-  "dependencies": ["openuv"],
+  "dependencies": [
+    "openuv"
+  ],
   "documentation": "https://github.com/danfulton72/openuv_dynamic_location",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/danfulton72/openuv_dynamic_location/issues",
   "requirements": [],
-  "version": "1.0.3"
+  "version": "1.0.4"
 }
